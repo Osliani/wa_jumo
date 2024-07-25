@@ -9,11 +9,11 @@ def show_json(obj):
     print(json.loads(obj.model_dump_json()))
     
     
-def wait_on_run(run, thread):
+def wait_on_run(run, thread_id):
     while run.status == "queued" or run.status == "in_progress":
         run = client.beta.threads.runs.retrieve(
-            thread_id=thread.id,
-            run_id=run.id,
+            thread_id = thread_id,
+            run_id = run.id,
         )
         time.sleep(0.5)
     return run
@@ -26,28 +26,28 @@ def pretty_print(messages):
     print()
     
 
-def add_message(message, thread):
+def add_message(message, thread_id):
     message_object = client.beta.threads.messages.create (
-        thread_id = thread.id, 
+        thread_id = thread_id, 
         role = "user", 
         content = message
     )
     return message_object
 
 
-def add_assistant(assistant_id, thread):
+def add_assistant(assistant_id, thread_id):
     run = client.beta.threads.runs.create (
-        thread_id = thread.id,
+        thread_id = thread_id,
         assistant_id = assistant_id,
     )
     return run
 
 
-def submit_message(message:str, thread, assistant_id):
-    message_object = add_message(message, thread)
-    run = add_assistant(assistant_id, thread)
-    run = wait_on_run(run, thread)
-    response = client.beta.threads.messages.list(thread_id=thread.id, order="asc", after=message_object.id)
+def submit_message(message:str, thread_id, assistant_id):
+    message_object = add_message(message, thread_id)
+    run = add_assistant(assistant_id, thread_id)
+    run = wait_on_run(run, thread_id)
+    response = client.beta.threads.messages.list(thread_id=thread_id, order="asc", after=message_object.id)
     ans = ""
     for r in response:
         ans += f"{r.content[0].text.value}\n"
@@ -63,5 +63,5 @@ def send_twilio_message(body, from_, to):
         to = f"whatsapp:+{to}"
     )
     print("Mensaje Enviado!")
-    print(f"-Assistant: {body}")
+    print(f"- Assistant: {body}")
     return str(MessagingResponse())
