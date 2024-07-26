@@ -1,5 +1,6 @@
 from flask import Flask, request
 from openai import OpenAI
+from twilio.twiml.messaging_response import MessagingResponse
 from dotenv import load_dotenv
 import utils, mongo, os, re
 
@@ -26,7 +27,8 @@ def crear_app():
         print(f"- User: {incoming_msg}")
         
         ans = utils.submit_message(incoming_msg, thread_id, ASSISTANT_ID)
-        return utils.send_twilio_message(ans, BOT_NUMBER, user)
+        utils.send_twilio_message2(ans, BOT_NUMBER, user)
+        return str(MessagingResponse())
             
     return app
 
