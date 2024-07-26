@@ -1,7 +1,7 @@
 from openai import OpenAI
 from pymongo import MongoClient
-import os
 from dotenv import load_dotenv
+import os, utils
 
 load_dotenv()
 
@@ -16,7 +16,11 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def create_thread(number):
     thread = openai_client.beta.threads.create()
-    update_thread(number, thread.id)
+    threads_collection.update_one(
+        {"number": number},
+        {"$set": {"thread_id": thread.id, "interactions": 1}},
+        upsert=True
+    )
     return thread.id
     
 
@@ -31,6 +35,18 @@ def update_thread(number, thread_id):
 def get_thread(number):
     thread = threads_collection.find_one({"number": number})
     if thread:
+        interactions = int(thread["interactions"])
+        if interactions >= 10:
+            BOT_NUMBER = os.getenv("BOT_NUMBER")
+            utils.send_twilio_message2("Historial reseteado por alcanzar el límite de interacciones.", BOT_NUMBER, number)
+            print("Historial reseteado por cantidad de interacciones.")
+            return create_thread(number)
+        
+        threads_collection.update_one(
+            {"number": number},
+            {"$set": {"interactions": interactions + 1}},
+            upsert=True
+        )
         return thread["thread_id"]
     
     return None

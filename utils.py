@@ -1,8 +1,7 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 from twilio.rest import Client
-from twilio.twiml.messaging_response import MessagingResponse
-import os, time, json, asyncio
+import os, time, json, mongo
 
 load_dotenv()
 
@@ -68,7 +67,7 @@ def send_twilio_message(body, from_, to):
         to = f"whatsapp:+{to}"
     )
     print("Mensaje Enviado!")
-    return str(MessagingResponse())
+    return
 
 
 def send_twilio_message2(body, from_, to):
@@ -84,7 +83,7 @@ def send_twilio_message2(body, from_, to):
                 to = f"whatsapp:+{to}"
             )
             print("Mensaje Enviado!")
-            return
+            return True
         except Exception as error:
             print(f"Attempt {attempt} failed:", error)
             if attempt < retries:
@@ -92,3 +91,4 @@ def send_twilio_message2(body, from_, to):
                 time.sleep(delay)  # Wait before retrying
             else:
                 print("All attempts to send the message failed.")
+                return None

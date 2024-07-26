@@ -14,6 +14,7 @@ def crear_app():
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
     ASSISTANT_ID = os.getenv("ASSISTANT_ID")
     BOT_NUMBER = os.getenv("BOT_NUMBER")
+    WORDS_LIMIT = 1599
 
     @app.route('/whatsapp', methods=['POST'])
     def whatsapp_reply():
@@ -26,8 +27,19 @@ def crear_app():
         print("Mensaje Recibido!")
         print(f"- User: {incoming_msg}")
         
-        ans = utils.submit_message(incoming_msg, thread_id, ASSISTANT_ID)
-        utils.send_twilio_message2(ans, BOT_NUMBER, user)
+        try:
+            ans = utils.submit_message(incoming_msg, thread_id, ASSISTANT_ID)
+        except Exception as error:
+            print(f"Historial reseteado por el siguiente error: {error}")
+            thread_id = mongo.create_thread(user)
+            ans = utils.submit_message(incoming_msg, thread_id, ASSISTANT_ID)
+        
+        if len(ans) > WORDS_LIMIT:
+            ans = ans[:WORDS_LIMIT]
+        success = utils.send_twilio_message2(ans, BOT_NUMBER, user)
+        if not success:
+            return str(MessagingResponse(ans))
+        
         return str(MessagingResponse())
             
     return app
