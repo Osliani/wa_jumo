@@ -1,5 +1,8 @@
 import requests
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_oauth_token():
     key = os.getenv('PUBLIC_ODOO_CLIENT_ID')
@@ -21,3 +24,6 @@ def get_oauth_token():
     data = response.json()
 
     return data
+
+""" token = get_oauth_token()
+print(token) """

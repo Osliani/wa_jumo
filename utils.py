@@ -51,7 +51,8 @@ def submit_message(message:str, thread_id, assistant_id):
     ans = ""
     for r in response:
         ans += f"{r.content[0].text.value}\n"
-        
+    
+    print(f"- Assistant: {ans}")
     return ans
 
 
@@ -63,5 +64,4 @@ def send_twilio_message(body, from_, to):
         to = f"whatsapp:+{to}"
     )
     print("Mensaje Enviado!")
-    print(f"- Assistant: {body}")
     return str(MessagingResponse())
