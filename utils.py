@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
 from openai import OpenAI
-import os, time, json
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+import os, time, json
 
-client = OpenAI(api_key=os.environ.get("API_KEY"))
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def show_json(obj):
     print(json.loads(obj.model_dump_json()))

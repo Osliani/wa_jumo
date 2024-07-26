@@ -1,6 +1,5 @@
-import requests
-import os
 from dotenv import load_dotenv
+import requests, os
 
 load_dotenv()
 
@@ -15,6 +14,7 @@ def get_oauth_token():
     body = f'grant_type=client_credentials&client_id={key}&client_secret={secret}'
 
     response = requests.post(url, headers=headers, data=body)
+    print(response)
 
     if response.status_code != 200:
         print(f"Error: {response.status_code}")
@@ -25,5 +25,5 @@ def get_oauth_token():
 
     return data
 
-""" token = get_oauth_token()
-print(token) """
+token = get_oauth_token()
+print(token)

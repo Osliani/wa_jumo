@@ -1,50 +1,41 @@
-from fetchOdooData import fetch_odoo_data
-from getToken import *
+import requests
+from getToken import get_oauth_token
 
-def create_lead(name, contact_name, contact_email, contact_phone, description, priority='3', stage_id=None):
-    """
-    Crea un nuevo lead en Odoo.
-
-    :param name: Nombre del lead.
-    :param contact_name: Nombre de contacto del lead.
-    :param contact_email: Correo electrónico de contacto del lead.
-    :param contact_phone: Teléfono de contacto del lead.
-    :param description: Descripción del lead.
-    :param priority: Prioridad del lead (opcional, por defecto '3').
-    :param stage_id: ID de la etapa del lead (opcional, si se especifica se asignará al lead).
-    :return: ID del lead creado.
-    """
+def create_lead(lead_details):
     token = get_oauth_token()
     
-    data = {
-        'name': name,
-        'contact_name': contact_name,
-        'contact_email': contact_email,
-        'contact_phone': contact_phone,
-        'description': description,
-        'priority': priority,
+    headers = {
+        "Authorization": f"Bearer {token}"
     }
     
-    # Añadir el campo 'stage_id' solo si se proporciona
-    if stage_id:
-        data['stage_id'] = stage_id
+    data = {
+        "model": "crm.lead",
+        "method": "create",
+        "args": [
+            {
+                "stage_id": 1,
+                "type": "opportunity",
+                "name": f"JUMOWEB {lead_details['name']}",
+                "email_from": lead_details['email'],
+                "description": lead_details['message'],
+            }
+        ]
+    }
     
-    # Usar el método 'create' del modelo 'crm.lead' para crear el lead
-    lead = fetch_odoo_data('crm.lead', 'create', data, token)
+    response = requests.post(
+        "https://odoo.jumotech.com/api/v2/call",
+        headers=headers,
+        json=data
+    )
     
-    return lead
+    response_data = response.json()
+    return response_data
 
 
-# Crear un nuevo lead
-lead_id = create_lead(
-    name="Oportunidad de Venta XYZ",
-    contact_name="Juan Pérez",
-    contact_email="juan.perez@example.com",
-    contact_phone="123456789",
-    description="Cliente interesado en nuestro producto A.",
-    priority='1',  # Alta prioridad
-    stage_id=3      # Asignar a una etapa específica
-)
+lead_details = {
+    "name": "Juan",
+    "email": "dsa@dfsa.com",
+    "message": "Hola"
+}
 
-print(f"Lead creado con ID: {lead_id}")
-
+print(create_lead(lead_details))
