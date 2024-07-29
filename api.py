@@ -38,7 +38,7 @@ def crear_app():
             ans = ans[:WORDS_LIMIT]
         success = utils.send_twilio_message2(ans, BOT_NUMBER, user)
         if not success:
-            return str(MessagingResponse(ans))
+            return str(MessagingResponse().message(ans))
         
         return str(MessagingResponse())
             
