@@ -1,13 +1,13 @@
 from openai import OpenAI
 from pymongo import MongoClient
 from dotenv import load_dotenv
-import os, utils
+import os
 
 load_dotenv()
 
 MONGO_URI = os.getenv('DATABASE_URL')
 client = MongoClient(MONGO_URI)
-db = client['webchat_jumo']
+db = client['chat_jumo']
 threads_collection = db['threads']
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

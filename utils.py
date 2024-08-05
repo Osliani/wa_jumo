@@ -74,7 +74,7 @@ def resume_chat(user_id):
     
 def create_lead(name, email, resume, number):
     lead_details = {
-        "name": name,
+        "name": f"WhatsApp - {name}",
         "email": email,
         "phone": number,
         "message": resume,
