@@ -72,10 +72,11 @@ def resume_chat(user_id):
     return resume_history
     
     
-def create_lead(name, email, resume):
+def create_lead(name, email, resume, number):
     lead_details = {
         "name": name,
         "email": email,
+        "phone": number,
         "message": resume,
     }
     
@@ -133,7 +134,7 @@ def submit_message(message:str, thread_id, assistant_id, user_id):
         if function_name == "create_lead":
             resume = resume_chat(user_id)
             print(f"Resumen: {resume}")
-            tool_ans = create_lead(**arguments, resume=resume)
+            tool_ans = create_lead(**arguments, resume=resume, number=user_id)
             #tool_ans = "El equipo de ventas se pondrá en contacto contigo proximamente."
         
         #enviar la respuesta de la tool
