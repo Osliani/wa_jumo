@@ -1,7 +1,7 @@
 {
     "apps": [
       {
-        "name": "web_jumobot",
+        "name": "whatsapp_jumobot",
         "script": "./api.py",
         "interpreter": "python3",
         "env": {
