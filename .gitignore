@@ -1,8 +1,3 @@
-test.py
-test2.py
-fetchOdooData.py
-send_mail.py
-getToken.py
-create_lead.py
 __pycache__/
 .env
+test.py
