@@ -92,6 +92,7 @@ def create_lead(name, email, resume, number):
                 "name": f"{lead_details['name']}",
                 "email_from": lead_details["email"],
                 "description": lead_details["message"],
+                "phone": lead_details["phone"],
             }
         ])
     }
