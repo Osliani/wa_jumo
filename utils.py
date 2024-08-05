@@ -89,7 +89,7 @@ def create_lead(name, email, resume, number):
             {
                 "stage_id": 1,
                 "type": "opportunity",
-                "name": f"JUMOWEB {lead_details['name']}",
+                "name": f"{lead_details['name']}",
                 "email_from": lead_details["email"],
                 "description": lead_details["message"],
             }
