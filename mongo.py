@@ -7,7 +7,7 @@ load_dotenv()
 
 MONGO_URI = os.getenv('DATABASE_URL')
 client = MongoClient(MONGO_URI)
-db = client['chat_jumo']
+db = client['wa_jumo']
 threads_collection = db['threads']
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
