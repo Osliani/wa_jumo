@@ -2,6 +2,7 @@ from flask import Flask, request
 from dotenv import load_dotenv
 from openai import OpenAI
 from twilio.twiml.messaging_response import MessagingResponse
+from waitress import serve
 import utils, mongo, os, re
 
 load_dotenv()
@@ -58,4 +59,5 @@ def crear_app():
 
 if __name__ == '__main__':
     app = crear_app()
-    app.run(debug=True, host='0.0.0.0', port=3026)
+    #app.run(debug=True, host='0.0.0.0', port=3026)
+    serve(app, host="0.0.0.0", port=3026)
