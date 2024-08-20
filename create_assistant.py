@@ -1,5 +1,5 @@
 from openai import OpenAI
-import os, utils
+import os
 
 client = OpenAI(api_key=os.environ.get("API_KEY"))
 

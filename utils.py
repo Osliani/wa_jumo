@@ -8,6 +8,9 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
+PUBLIC_ODOO_URL = os.getenv("PUBLIC_ODOO_URL")
+PUBLIC_CREATE_PATH = os.getenv("PUBLIC_CREATE_PATH")
+PUBLIC_SEARCH_PATH = os.getenv("PUBLIC_SEARCH_PATH")
 
 def show_json(obj):
     print(json.loads(obj.model_dump_json()))
@@ -73,13 +76,22 @@ def resume_chat(user_id):
     
     
 def create_lead(name, email, resume, number):
-    lead_details = {
-        "name": f"WhatsApp - {name}",
+    partner_data = {
+        "name": name,
         "email": email,
         "phone": number,
+    }
+
+    partner = create_partner(partner_data)
+
+    lead_details = {
+        "name": f"WhatsApp - {partner['name']}",
+        "email": partner["email"],
+        "phone": partner["phone"],
         "message": resume,
     }
     
+    print(lead_details)
     token = get_oauth_token()
     
     form_data = {
@@ -89,7 +101,7 @@ def create_lead(name, email, resume, number):
             {
                 "stage_id": 1,
                 "type": "opportunity",
-                "name": f"{lead_details['name']}",
+                "name": lead_details['name'],
                 "email_from": lead_details["email"],
                 "description": lead_details["message"],
                 "phone": lead_details["phone"],
@@ -97,10 +109,10 @@ def create_lead(name, email, resume, number):
         ])
     }
     
-    headers = {"Authorization": f"Bearer {token['access_token']}"}
+    headers = {"Authorization": f"Bearer {token}"}
 
     response = requests.post(
-        "https://odoo.jumotech.com/api/v2/call",
+        f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}",
         headers=headers,
         data=form_data,
     )
@@ -110,10 +122,8 @@ def create_lead(name, email, resume, number):
         print(data)
         return "El equipo de ventas se pondrá en contacto contigo proximamente."
     else:
-        raise Exception(f"Error: {response.status_code}")
-    
-    
-        
+        raise Exception(f"Error al crear lead: {response.status_code}")
+          
     
 def submit_message(message:str, thread_id, assistant_id, user_id):
     message_object = add_message(message, thread_id)
@@ -134,8 +144,12 @@ def submit_message(message:str, thread_id, assistant_id, user_id):
         tool_ans = ""
         if function_name == "create_lead":
             resume = resume_chat(user_id)
-            print(f"Resumen: {resume}")
-            tool_ans = create_lead(**arguments, resume=resume, number=user_id)
+            #print(f"Resumen: {resume}")
+            try:
+                tool_ans = create_lead(**arguments, resume=resume, number=user_id)
+            except Exception as e:
+                print(str(e))
+                tool_ans = "Error al realizar la acción."
             #tool_ans = "El equipo de ventas se pondrá en contacto contigo proximamente."
         
         #enviar la respuesta de la tool
@@ -164,7 +178,6 @@ def send_twilio_message(body, from_, to):
         from_ = f"whatsapp:+{from_}",
         to = f"whatsapp:+{to}"
     )
-    print("Mensaje Enviado!")
     return
 
 
@@ -180,7 +193,6 @@ def send_twilio_message2(body, from_, to):
                 from_ = f"whatsapp:+{from_}",
                 to = f"whatsapp:+{to}"
             )
-            print("Mensaje Enviado!")
             return True
         except Exception as error:
             print(f"Attempt {attempt} failed:", error)
@@ -190,4 +202,71 @@ def send_twilio_message2(body, from_, to):
             else:
                 print("All attempts to send the message failed.")
                 return None
+
+
+def create_partner(form_data):
+    try:
+        partner = get_partner_by_email(form_data["email"])
+        if partner:
+            print(f"Socio ya existente: {partner}")
+            partner_data = {
+                "name": partner["name"],
+                "email": partner["email"],
+                "phone": partner["phone"],
+            }
+            return partner_data
         
+        token = get_oauth_token()
+    except Exception as e:
+        print(str(e))
+        return False
+
+    odoo_form_data = {
+        "model": "res.partner",
+        "method": "create",
+        "args": [
+            {
+                "name": form_data["name"],
+                "email": form_data["email"],
+                "phone": form_data["phone"],
+            }
+        ],
+        "kwargs": {}
+    }
+    
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.post(f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}", json=odoo_form_data, headers=headers)
+
+    if not response.ok:
+        error_text = response.text
+        print(f"Error al crear usuario en Odoo: {error_text}")
+        return False
+
+    print(f"Socio creado: {form_data}")
+    return form_data
+        
+
+def get_partner_by_email(email):
+    token = get_oauth_token()
+    url = f"{PUBLIC_ODOO_URL}{PUBLIC_SEARCH_PATH}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "res.partner",
+        "domain": [["email", "=", email]],
+        "fields": ["name", "phone", "email"],
+        "limit": 1
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        partners = response.json()
+        if partners:
+            return partners[0]  # Retorna el primer (y único) socio encontrado
+        else:
+            return None
+    else:
+        raise Exception(f"Error al obtener el socio: {response.text}")
