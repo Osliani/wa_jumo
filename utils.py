@@ -83,16 +83,6 @@ def create_lead(name, email, resume, number):
     }
 
     partner = create_partner(partner_data)
-
-    lead_details = {
-        "name": f"WhatsApp - {partner['name']}",
-        "email": partner["email"],
-        "phone": partner["phone"],
-        "message": resume,
-    }
-    
-    print(lead_details)
-    token = get_oauth_token()
     
     form_data = {
         "model": "crm.lead",
@@ -101,14 +91,16 @@ def create_lead(name, email, resume, number):
             {
                 "stage_id": 1,
                 "type": "opportunity",
-                "name": lead_details['name'],
-                "email_from": lead_details["email"],
-                "description": lead_details["message"],
-                "phone": lead_details["phone"],
+                "name": f"WhatsApp - {partner['name']}",
+                "email_from": partner["email"],
+                "phone": partner["phone"],
+                "description": resume,
+                "partner_id": partner["id"],
             }
         ])
     }
     
+    token = get_oauth_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     response = requests.post(
@@ -210,6 +202,7 @@ def create_partner(form_data):
         if partner:
             print(f"Socio ya existente: {partner}")
             partner_data = {
+                "id": partner["id"],
                 "name": partner["name"],
                 "email": partner["email"],
                 "phone": partner["phone"],
@@ -257,7 +250,7 @@ def get_partner_by_email(email):
     payload = {
         "model": "res.partner",
         "domain": [["email", "=", email]],
-        "fields": ["name", "phone", "email"],
+        "fields": ["name", "phone", "email", "id"],
         "limit": 1
     }
 
