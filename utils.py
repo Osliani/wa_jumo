@@ -65,7 +65,8 @@ def resume_chat(user_id):
     for chat in chats:
         history += f"{chat['role']}: "
         history += f"{chat['message']} \n"
-        
+    
+    #print(history)
     thread = client.beta.threads.create()
     message_object = add_message(history, thread.id)
     RESUME_ASSISTANT_ID = os.getenv('RESUME_ASSISTANT_ID')
@@ -73,41 +74,70 @@ def resume_chat(user_id):
     run = wait_on_run(run, thread.id)
     resume_history = get_response(thread.id, message_object)
     return resume_history
-    
-    
-def create_lead(name, email, resume, number):
-    partner_data = {
-        "name": name,
-        "email": email,
-        "phone": number,
-    }
 
-    partner = create_partner(partner_data)
+
+def extraction(user_id):
+    chats = mongo.get_chat(user_id)
+    history = ""
+    for chat in chats:
+        history += f"{chat['role']}: "
+        history += f"{chat['message']} \n"
+        
+    thread = client.beta.threads.create()
+    message_object = add_message(history, thread.id)
+    EXTRACTOR_ASSISTANT_ID = os.getenv('EXTRACTOR_ASSISTANT_ID')
+    run = add_assistant(EXTRACTOR_ASSISTANT_ID, thread.id)
+    run = wait_on_run(run, thread.id)
+    info = get_response(thread.id, message_object)
+    return info
+
+
+def create_lead(name, email, resume, number, info):
+    #crear o buscar partner
+    partner = create_partner(name, email, number)
+    print(f"Socio creado: {partner}")
     
-    form_data = {
-        "model": "crm.lead",
-        "method": "create",
-        "args": json.dumps([
-            {
-                "stage_id": 1,
-                "type": "opportunity",
-                "name": f"WhatsApp - {partner['name']}",
-                "email_from": partner["email"],
-                "phone": partner["phone"],
-                "description": resume,
-                "partner_id": partner["id"],
-            }
-        ])
-    }
+    #crear orden de venta
+    order_line = []
+    for i in info:
+        order_line.append({
+            "name": i["product_name"],
+            "product_id": i["product_id"],
+            "price_unit": i["price_unit"],
+            "product_uom": i["product_uom"],
+            "product_uom_qty": 1,
+            "discount": i["discount"],
+        })
+        
+    sale_order = create_sale_order(partner["id"], order_line)
+    print(f"Orden de venta creada con ID: {sale_order}")
+    #print("Orden de venta simulada")
+    
+    #crear lead
+    try:
+        form_data = {
+            "model": "crm.lead",
+            "method": "create",
+            "args": json.dumps([
+                {
+                    "stage_id": 1,
+                    "type": "opportunity",
+                    "name": f"WhatsApp - {partner['name']}",
+                    "email_from": partner["email"],
+                    "phone": partner["phone"],
+                    "description": resume,
+                    "partner_id": partner["id"],
+                }
+            ])
+        }
+    except Exception as error:
+        print(f"Error al consultar los campos del partner ({type(partner)}): {partner}")
+        print(str(error))
     
     token = get_oauth_token()
     headers = {"Authorization": f"Bearer {token}"}
-
-    response = requests.post(
-        f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}",
-        headers=headers,
-        data=form_data,
-    )
+    response = requests.post(f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}", headers=headers, data=form_data)
+    #return "El equipo de ventas se pondrá en contacto contigo proximamente."
 
     if response.status_code == 200:
         data = response.json()
@@ -115,8 +145,8 @@ def create_lead(name, email, resume, number):
         return "El equipo de ventas se pondrá en contacto contigo proximamente."
     else:
         raise Exception(f"Error al crear lead: {response.status_code}")
-          
-    
+   
+
 def submit_message(message:str, thread_id, assistant_id, user_id):
     message_object = add_message(message, thread_id)
     run = add_assistant(assistant_id, thread_id)
@@ -137,13 +167,21 @@ def submit_message(message:str, thread_id, assistant_id, user_id):
         if function_name == "create_lead":
             resume = resume_chat(user_id)
             #print(f"Resumen: {resume}")
+            info = extraction(user_id)
+            print("Información extraída:")
+            print(info)
+            json_info = json.loads(info)
             try:
-                tool_ans = create_lead(**arguments, resume=resume, number=user_id)
+                tool_ans = create_lead(**arguments, resume=resume, number=user_id, info=json_info)
+                print("Lead Creado!")
             except Exception as e:
                 print(str(e))
+                print("Error en create_lead.")
                 tool_ans = "Error al realizar la acción."
             #tool_ans = "El equipo de ventas se pondrá en contacto contigo proximamente."
-        
+        elif function_name == "clean_chat":
+            mongo.create_thread(user_id)
+            tool_ans = "Historial Eliminado."
         #enviar la respuesta de la tool
         try:
             run = client.beta.threads.runs.submit_tool_outputs_and_poll(
@@ -155,8 +193,8 @@ def submit_message(message:str, thread_id, assistant_id, user_id):
                 }],
             )
             print("Tool outputs submitted successfully.")
-        except Exception as e:
-            print("Failed to submit tool outputs:", e)
+        except Exception as error:
+            print("Failed to submit tool outputs:", error)
         
         #generar la respuesta del modelo
         run = wait_on_run(run, thread_id)
@@ -196,49 +234,44 @@ def send_twilio_message2(body, from_, to):
                 return None
 
 
-def create_partner(form_data):
+def create_partner(name, email, phone):
     try:
-        partner = get_partner_by_email(form_data["email"])
+        partner = get_partner_by_email(email)
         if partner:
             print(f"Socio ya existente: {partner}")
-            partner_data = {
-                "id": partner["id"],
-                "name": partner["name"],
-                "email": partner["email"],
-                "phone": partner["phone"],
-            }
-            return partner_data
+            return partner
         
         token = get_oauth_token()
+        odoo_form_data = {
+            "model": "res.partner",
+            "method": "create",
+            "args": [
+                {
+                    "name": name,
+                    "email": email,
+                    "phone": phone,
+                }
+            ],
+            "kwargs": {}
+        }
+    
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = requests.post(f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}", json=odoo_form_data, headers=headers)
+
+        if not response.ok:
+            error_text = response.text
+            print(f"Error al crear usuario en Odoo: {error_text}")
+            return False
+
+        partner = odoo_form_data["args"][0]
+        return partner
+    
     except Exception as e:
+        print("Error en create_partner.")
         print(str(e))
         return False
 
-    odoo_form_data = {
-        "model": "res.partner",
-        "method": "create",
-        "args": [
-            {
-                "name": form_data["name"],
-                "email": form_data["email"],
-                "phone": form_data["phone"],
-            }
-        ],
-        "kwargs": {}
-    }
-    
-    headers = {"Authorization": f"Bearer {token}"}
-
-    response = requests.post(f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}", json=odoo_form_data, headers=headers)
-
-    if not response.ok:
-        error_text = response.text
-        print(f"Error al crear usuario en Odoo: {error_text}")
-        return False
-
-    print(f"Socio creado: {form_data}")
-    return form_data
-        
 
 def get_partner_by_email(email):
     token = get_oauth_token()
@@ -263,3 +296,58 @@ def get_partner_by_email(email):
             return None
     else:
         raise Exception(f"Error al obtener el socio: {response.text}")
+    
+    
+def create_sale_order(partner_id, order_line):
+    token = get_oauth_token()
+    url = f"{PUBLIC_ODOO_URL}{PUBLIC_CREATE_PATH}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    order_line_commands = [(0, 0, line) for line in order_line]
+    payload = {
+        "model": "sale.order",
+        "method": "create",
+        "args": [
+            {
+                "partner_id": partner_id,
+                "order_line": order_line_commands,
+                "company_id": 1,
+            }
+        ],
+        "kwargs": {}
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        order_id = response.json()
+        return order_id
+    else:
+        raise Exception(f"Error al crear la orden de venta: {response.text}")
+    
+    
+def search_product_by_id(product_id):
+    token = get_oauth_token()
+    url = f"{PUBLIC_ODOO_URL}{PUBLIC_SEARCH_PATH}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "product.product",
+        "domain": [["id", "=", product_id]],
+        "fields": ["id", "name", "uom_id", "list_price", "taxes_id"],
+        "limit": 1
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        product_data = response.json()
+        if product_data:
+            product = product_data[0]
+            return product.get("taxes_id")
+        else:
+            return None
+    else:
+        raise Exception(f"Error al buscar el producto: {response.text}")

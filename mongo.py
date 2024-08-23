@@ -18,7 +18,11 @@ def create_thread(user_id):
     thread = openai_client.beta.threads.create()
     threads_collection.update_one(
         {"user_id": user_id},
-        {"$set": {"thread_id": thread.id, "interactions": 1}},
+        {"$set": {
+            "thread_id": thread.id, 
+            "interactions": 1, 
+            "messages": []
+        }},
         upsert=True
     )
     return thread.id
