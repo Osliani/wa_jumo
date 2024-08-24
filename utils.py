@@ -95,7 +95,6 @@ def extraction(user_id):
 def create_lead(name, email, resume, number, info):
     #crear o buscar partner
     partner = create_partner(name, email, number)
-    print(f"Socio creado: {partner}")
     
     #crear orden de venta
     order_line = []
@@ -105,8 +104,9 @@ def create_lead(name, email, resume, number, info):
             "product_id": i["product_id"],
             "price_unit": i["price_unit"],
             "product_uom": i["product_uom"],
-            "product_uom_qty": 1,
+            "product_uom_qty": i["product_uom_qty"],
             "discount": i["discount"],
+            "price_total": i["product_uom_qty"]*i["price_unit"]
         })
         
     sale_order = create_sale_order(partner["id"], order_line)
@@ -265,6 +265,7 @@ def create_partner(name, email, phone):
             return False
 
         partner = odoo_form_data["args"][0]
+        print(f"Socio creado: {partner}")
         return partner
     
     except Exception as e:

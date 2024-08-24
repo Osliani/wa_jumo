@@ -4,7 +4,7 @@ import os
 client = OpenAI(api_key=os.environ.get("API_KEY"))
 
 prompt = """
-Se te enviarán conversaciones entre un cliente potencial y un asistente virtual. Necesito que extraigas la información de cada uno de los productos y servicios sugeridos por el asistente y la envíes en tu respuesta. En el caso de que exista un rango de precios se pondrá la media como precio unitario. El parámetro product_id lo obtendras a partir del nombre del producto y del siguiente diccionario:
+Se te enviarán conversaciones entre un cliente potencial y un asistente virtual. Necesito que extraigas la información de cada uno de los productos y servicios sugeridos por el asistente y la envíes en tu respuesta. En el caso de que exista un rango de precios se pondrá la media como precio unitario. En el caso de que se solicite un servicio a pagar por horas el campo product_uom_qty contendrá la cantidad de horas solicitadas por el usuario, en caso contrario será 1 su valor. El parámetro product_id lo obtendras a partir del nombre del producto y del siguiente diccionario:
 products_id = {
     "Fábrica de Empleados Virtuales": 964,
     "Implantación de Odoo Community Plus": 512,
@@ -32,7 +32,8 @@ Por favor, responde estrictamente en el siguiente formato JSON (para poder conve
     "price_unit": number,
     "description": "string",
     "product_uom": number,
-    "discount": number
+    "discount": number,
+    "product_uom_qty": number
   }
 ]
 Ejemplo:
@@ -43,14 +44,15 @@ Ejemplo:
     "price_unit": 80,
     "description": "De 10 horas a 40 horas: 80€ por hora - De 40 horas a 100 horas: 70€ por hora - De 100 horas a 300 horas: 65€ por hora",
     "product_uom": 6,
-    "discount": 0
+    "discount": 0,
+    "product_uom_qty": 40
   }
 ]
 Los parametros que no se encuentren enviarlos como "Empty".
 """
 
 assistant = client.beta.assistants.create (
-  name = "Extractor_14",
+  name = "Extractor_15",
   instructions = prompt,
   model = "gpt-4-1106-preview",
 )
