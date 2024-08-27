@@ -89,6 +89,8 @@ def extraction(user_id):
     run = add_assistant(EXTRACTOR_ASSISTANT_ID, thread.id)
     run = wait_on_run(run, thread.id)
     info = get_response(thread.id, message_object)
+    if info[0] == 'j':
+        info = info[4:]
     return info
 
 
